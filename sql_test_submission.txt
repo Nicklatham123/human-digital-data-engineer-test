@@ -1,0 +1,110 @@
+--Connecting to the dataset:
+--You should be able to access our interview dataset using the postgreSQL-compatible client of your choice, or using e.g. the psycopg2 module in python, provided the IP the connection is coming from does not change. We have confirmed that the dbeaver GUI functions well enough with our servers - this may provide a good starting point to confirm you can connect and browse the data.
+--Do not post any of the connection details within git remote repositories.
+--Connect to:
+--<REDACTED FOR GIT COMMIT - SEE CREDENTIALS FILE FOR DETAILS>
+--The schema to work in is telegram_test_data.
+--Your user has all privileges on this schema required to query data. Please contact charlie.murgatroyd@human-digital.com if you hit any problems with data access or permissions as we would not expect you to resolve these yourself. Please treat any data in the database as sensitive and do not input any schema details into search engines or similar.
+--The dataset provided is from a set of Telegram channels with common subject matter, ingested in April 2024. Telegram channels, their messages, and urls from within the messages are included, as well as data relating to submission of new channels to our dataset. The definition of the tables (DDL) contains relevant information on how to join tables.
+
+--For each of the following, please submit your answer in the form of a single, fully functional SQL query placed below the relevant question. In each case, the query should output a single table which answers every part of the question. Clear labels/names/aliases, informative comment strings, and appropriate usage of newlines and indentation to improve readability will all be marked positively.
+
+--1. For each channel, how many messages did they post in 2023, 
+--what was the timestamp of the earliest message in that year, 
+--how many total URLs did those messages include, how many unique URL values did those messages include? 
+--Order this table with channels whose username is all lowercase at the top. 
+--Can you guarantee that all channels appear in this list, even if they did not post in 2023?
+with 
+	messages_2023
+as (
+	select 
+		m.*  
+	from
+		message m 
+	where 
+		m.message_timestamp between '2023-01-01' and '2023-12-31'
+),
+messages_including_urls as (
+	select
+		*
+	from
+		message m
+	where m.message_text like '%http%'
+)
+select 
+	c.channel_id,
+	count(m_2023.message_text) as total_messages,
+	min(m_2023.message_timestamp ) as earliest_message_timestamp,
+	count(url_m_2023.message_text) as total_messages_including_urls,
+	count(distinct(url_m_2023.message_text)) as unique_messages_including_urls
+from
+	channel c
+	left join messages_2023 m_2023 on c.channel_id = m_2023.fwd_from_channel_id
+	left join messages_including_urls url_m_2023 on c.channel_id = url_m_2023.fwd_from_channel_id
+group by 
+	c.channel_id
+
+--2. For each of the channel.organisation values present in the dataset, 
+--what was the message_text, engagement sum, year, and numbered week of the year of the top 5 most engaged-with messages 
+--from that organisation? Engagement is defined as the sum of the message views, replies, forwards, and reactions. 
+--NB this solution should work for any arbitrary number of channel.organisation values and should not rely on hard coding any values.
+
+with messages_ranked as (
+select
+	fwd_from_channel_id as channel_id,
+	message_text,
+	coalesce(message_views,0) + coalesce(message_replies,0) + coalesce(message_forwards,0) + coalesce(message_reactions,0) as engagement_sum,
+	extract(year from message_timestamp) as message_year,
+	extract(week from message_timestamp) as message_week,
+	rank() over (
+		partition by fwd_from_channel_id 
+		order by (coalesce(message_views,0) + coalesce(message_replies,0) + coalesce(message_forwards,0) + coalesce(message_reactions,0)) desc) 
+		as message_rank
+from
+	message
+)
+select
+	channel_id,
+	message_text,
+	engagement_sum,
+	message_year,
+	message_week,
+	message_rank
+from
+	messages_ranked
+where
+	message_rank <= 5
+order BY
+	channel_id, message_rank
+	
+--3. Generate an ordered weekly time series of counts of messages that include 
+--either the exact case-insensitive string 'opponents' at any position, or start with the case-sensitive string 'GOAL! '. 
+--Guarantee that any week with no messages that meet these criteria still appears in the table and has a count of 0.
+with weeks as (
+	select generate_series('2023-01-01'::date, '2023-12-31'::date, '1 week') as week_start
+)
+select 
+	w.week_start,
+	count(m.message_id) as message_count
+from 
+	weeks w
+	left join message m on m.message_timestamp between w.week_start and w.week_start + interval '1 week'
+group by 
+	w.week_start
+order by
+	w.week_start
+	
+--4. Provide a report detailing each of the unique emojis used in the message.reactions_detail column, showing the number of times it was used in total (NB not the number of messages it was used on).
+
+--Not enough time to complete
+	-- Given more time I would break the reactions detail down into emoji and count using some kind of regular expression match, then sum the count across all messages and use a group by to group and order them
+
+--5. For each channel that posted in 2024, calculate their average daily posts in Q1 (Jan-Mar inc.), 
+--and their average daily posts in 2024 Q2 so far. 
+--Supply the percentage change in those averages between the two quarters, 
+--plus the standard deviation of the daily posts across all of 2024.
+	
+--Not enough time to complete
+	--Given more time I would filter the message to 2024, then group the posts by the timestamp date and sum them to get the average number of messages on each day.
+	--I'd then create two temporary tables for both quarters and then create a final table showing both quarters and the percentage change between the averages.
+	--For the standard deviaiton i'd use STDDEV across the daily average messages from 2024
