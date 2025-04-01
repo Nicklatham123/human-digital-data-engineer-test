@@ -14,7 +14,9 @@
 --how many total URLs did those messages include, how many unique URL values did those messages include? 
 --Order this table with channels whose username is all lowercase at the top. 
 --Can you guarantee that all channels appear in this list, even if they did not post in 2023?
-with 
+
+
+with --Create temporary table for messages from 2023 and messages that include a url in the message.text
 	messages_2023
 as (
 	select 
@@ -31,7 +33,7 @@ messages_including_urls as (
 		message m
 	where m.message_text like '%http%'
 )
-select 
+select -- select relevant data for the final table from the CTEs above
 	c.channel_id,
 	count(m_2023.message_text) as total_messages,
 	min(m_2023.message_timestamp ) as earliest_message_timestamp,
@@ -53,10 +55,10 @@ with messages_ranked as (
 select
 	fwd_from_channel_id as channel_id,
 	message_text,
-	coalesce(message_views,0) + coalesce(message_replies,0) + coalesce(message_forwards,0) + coalesce(message_reactions,0) as engagement_sum,
+	coalesce(message_views,0) + coalesce(message_replies,0) + coalesce(message_forwards,0) + coalesce(message_reactions,0) as engagement_sum, --Calculate engagement
 	extract(year from message_timestamp) as message_year,
 	extract(week from message_timestamp) as message_week,
-	rank() over (
+	rank() over ( -- assign a rank to each message based on grouping by the channel id and ordering by engagement score
 		partition by fwd_from_channel_id 
 		order by (coalesce(message_views,0) + coalesce(message_replies,0) + coalesce(message_forwards,0) + coalesce(message_reactions,0)) desc) 
 		as message_rank
@@ -80,7 +82,8 @@ order BY
 --3. Generate an ordered weekly time series of counts of messages that include 
 --either the exact case-insensitive string 'opponents' at any position, or start with the case-sensitive string 'GOAL! '. 
 --Guarantee that any week with no messages that meet these criteria still appears in the table and has a count of 0.
-with weeks as (
+
+with weeks as ( -- first generated a time series, then left joined to the messages table to populate the weeks with the count of messages in each week
 	select generate_series('2023-01-01'::date, '2023-12-31'::date, '1 week') as week_start
 )
 select 
