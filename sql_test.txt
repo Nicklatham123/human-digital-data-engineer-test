@@ -1,0 +1,43 @@
+Connecting to the dataset:
+
+You should be able to access our interview dataset using the postgreSQL-compatible client of your choice, or using e.g. the psycopg2 module in python, provided the IP the connection is coming from does not change. We have confirmed that the dbeaver GUI functions well enough with our servers - this may provide a good starting point to confirm you can connect and browse the data.
+
+Do not post any of the connection details within git remote repositories.
+
+Connect to:
+
+<REDACTED FOR GIT COMMIT - SEE CREDENTIALS FILE FOR DETAILS>
+
+The schema to work in is telegram_test_data.
+
+Your user has all privileges on this schema required to query data. Please contact charlie.murgatroyd@human-digital.com if you hit any problems with data access or permissions as we would not expect you to resolve these yourself. Please treat any data in the database as sensitive and do not input any schema details into search engines or similar.
+
+The dataset provided is from a set of Telegram channels with common subject matter, ingested in April 2024. Telegram channels, their messages, and urls from within the messages are included, as well as data relating to submission of new channels to our dataset. The definition of the tables (DDL) contains relevant information on how to join tables.
+
+For each of the following, please submit your answer in the form of a single, fully functional SQL query placed below the relevant question. In each case, the query should output a single table which answers every part of the question. Clear labels/names/aliases, informative comment strings, and appropriate usage of newlines and indentation to improve readability will all be marked positively.
+
+
+1. For each channel, how many messages did they post in 2023, what was the timestamp of the earliest message in that year, how many total URLs did those messages include, how many unique URL values did those messages include? Order this table with channels whose username is all lowercase at the top. Can you guarantee that all channels appear in this list, even if they did not post in 2023?
+
+<PASTE QUERY HERE>
+
+
+2. For each of the channel.organisation values present in the dataset, what was the message_text, engagement sum, year, and numbered week of the year of the top 5 most engaged-with messages from that organisation? Engagement is defined as the sum of the message views, replies, forwards, and reactions. NB this solution should work for any arbitrary number of channel.organisation values and should not rely on hard coding any values.
+
+<PASTE QUERY HERE>
+
+
+3. Generate an ordered weekly time series of counts of messages that include either the exact case-insensitive string 'opponents' at any position, or start with the case-sensitive string 'GOAL! '. Guarantee that any week with no messages that meet these criteria still appears in the table and has a count of 0.
+
+<PASTE QUERY HERE>
+
+
+4. Provide a report detailing each of the unique emojis used in the message.reactions_detail column, showing the number of times it was used in total (NB not the number of messages it was used on).
+
+<PASTE QUERY HERE>
+
+
+5. For each channel that posted in 2024, calculate their average daily posts in Q1 (Jan-Mar inc.), and their average daily posts in 2024 Q2 so far. Supply the percentage change in those averages between the two quarters, plus the standard deviation of the daily posts across all of 2024.
+
+<PASTE QUERY HERE>
+
